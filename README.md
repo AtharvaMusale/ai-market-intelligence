@@ -1,5 +1,7 @@
 # AI Market Intelligence Platform
 
+![CI](https://github.com/AtharvaMusale/ai-market-intelligence/actions/workflows/ci.yml/badge.svg)
+
 Answers "what's happening in the market and why?" by combining prices, macro data, news, and SEC filings into an **auditable, cited daily briefing** plus a Q&A interface.
 
 The core design rule: **all numbers are computed in code** (DuckDB + pandas). The LLM (Claude Haiku 4.5) only narrates structured data and cites sources; it never does arithmetic. Every claim carries a source ID that traces back to a data field or a document URL.
@@ -152,8 +154,17 @@ The harness extracts every number and date from each claim and checks it against
 |---|---|---|---|---|
 | First real run | 0.911 (41/45), **FAIL** | 0.111 | 1.0 | 0.877 |
 | After prompt fixes | 1.000 (53/53), PASS | 0.0 | 1.0 | 0.960 |
+| Vanguard sector data, current prompts | 0.967 (58/60), PASS | 0.091 | 1.0 | 0.924 |
 
 The first run failed honestly: the writer cited incomplete sources (a rank without its `rank` fact, a count without `n_above`/`n_total`), called "above the 50-day average" an "uptrend", and wrote `FACT ` inside some source IDs, so the validator dropped those answers. The fix was to the prompt (bare IDs, cite every number and date, faithful wording) and to strip a stray `FACT ` label; the metric and the threshold did not change. Tool routing: 10/10 questions. In the second run, 9 of 10 answers matched perfectly; one (yield-curve question) stated an "as of" date without citing it. One full run costs about $0.05.
+
+**Latest run, in detail** (`eval_reports/2026-10-02-vanguard-run.json`). Both briefing misses were harness false positives, and the question answers exposed one real problem:
+- `500` in "S&P 500" was read as a measured number. Fixed: index names are now ignored.
+- `2026-09-02` for an NVDA 8-K was a correct date: the filing says "September 2, 2026" and the writer used ISO format. Fixed: written-out dates in filings are now recognized, and a wrong date still fails.
+- In one answer Haiku wrote "14.9% above its 200-day average", a figure that was not in the data: the model had done arithmetic itself, and slightly wrong. Fixed at the source: the 200-day distance is now a code-computed fact.
+- Still open: a few answers state "11 sectors" or an "as of" date without citing the fact behind it.
+
+**Not re-measured:** these fixes are covered by unit tests, but the evaluation has not been re-run since them, to avoid further paid Haiku calls. Re-running it (about 5 cents) is the next step before treating the numbers above as current. The 0.95 threshold has not changed.
 
 **What the evaluation does not catch:** interpretation ("at 52-week highs", "broad weakness") and direction words ("up" vs "down", since sign is ignored). It checks numbers and citations, not judgment. These are single runs on one day's data, not a statistical benchmark.
 

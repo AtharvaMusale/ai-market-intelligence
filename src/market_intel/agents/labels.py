@@ -37,7 +37,7 @@ DRILL_FIELDS = {
     "as_of": "data date", "verdict": "verdict", "trend": "trend", "rsi_zone": "RSI zone", "vs_spy_21d": "versus SPY (21-day)",
     "last": "last close", "ret_1d_pct": "1-day return (%)", "ret_5d_pct": "5-day return (%)", "ret_21d_pct": "21-day return (%)",
     "ret_21d_vs_spy_pct": "21-day return minus SPY (pp)", "sma_50": "50-day average", "sma_200": "200-day average",
-    "pct_vs_sma_50": "distance from 50-day average (%)", "rsi_14": "RSI", "drawdown_from_52w_high_pct": "drop from 52-week high (%)",
+    "pct_vs_sma_50": "distance from 50-day average (%)", "pct_vs_sma_200": "distance from 200-day average (%)", "rsi_14": "RSI", "drawdown_from_52w_high_pct": "drop from 52-week high (%)",
     "realized_vol_21d_pct": "21-day realized volatility (%)",
 }
 

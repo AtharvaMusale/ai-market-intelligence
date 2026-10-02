@@ -57,6 +57,7 @@ def ticker_technicals(prices: pd.DataFrame, ticker: str) -> dict:
         "sma_50": _num(sma50, 2),
         "sma_200": _num(sma200, 2),
         "pct_vs_sma_50": _num((last / sma50 - 1) * 100, 2),
+        "pct_vs_sma_200": None if sma200 is None else _num((last / sma200 - 1) * 100, 2),
         "rsi_14": _num(rsi, 1),
         "drawdown_from_52w_high_pct": _num((last / float(s.tail(TRADING_DAYS_YEAR).max()) - 1) * 100, 2),
         "realized_vol_21d_pct": _num(s.pct_change().tail(21).std(ddof=1) * (TRADING_DAYS_YEAR**0.5) * 100, 2),

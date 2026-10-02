@@ -10,7 +10,7 @@ import duckdb
 from market_intel.agents.tools import assemble_facts, drilldown_tool, rates_tool, regime_tool, sectors_tool
 from market_intel.analytics.loaders import load_price_matrix
 from market_intel.config import ALL_PRICE_TICKERS, EVAL_ABS_TOL, EVAL_REL_TOL, WATCHLIST
-from market_intel.eval.claims import extract_dates, extract_numbers
+from market_intel.eval.claims import extract_dates, extract_numbers, iso_dates_from_text
 
 
 def reference_facts(con: duckdb.DuckDBPyConnection, as_of: str | None = None) -> tuple[dict, dict[str, str]]:
@@ -19,7 +19,7 @@ def reference_facts(con: duckdb.DuckDBPyConnection, as_of: str | None = None) ->
     drilldown, _ = drilldown_tool(prices, list(WATCHLIST))
     facts = assemble_facts(regime_tool(prices), sectors_tool(prices), rates_tool(prices), drilldown)
     docs = {
-        doc_id: f"{title or ''} {text or ''} {published.date().isoformat()}"
+        doc_id: f"{title or ''} {text or ''} {published.date().isoformat()} {' '.join(iso_dates_from_text(text or ''))}"
         for doc_id, title, text, published in con.execute(
             "SELECT doc_id, title, text, published_at FROM documents"
         ).fetchall()

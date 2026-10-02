@@ -1,3 +1,4 @@
+import pytest
 """Tests for the evaluation harness: known-good and known-bad briefings, thresholds, routing."""
 import json
 
@@ -97,3 +98,31 @@ def test_run_eval_script_exit_codes(tmp_path):
     out = tmp_path / "report.json"
     assert main(["--dry-run", "--db", str(db), "--out", str(out)]) == 0
     assert json.loads(out.read_text())["passed"] is True
+
+
+def test_index_names_and_written_out_dates_are_not_false_alarms(seeded_con):
+    from market_intel.eval.claims import iso_dates_from_text
+
+    assert [t.value for t in extract_numbers("S&P 500 closed at 769.1; the Nasdaq 100 and Russell 2000 lagged")] == [769.1]
+    assert iso_dates_from_text("Date of earliest event reported: September 2, 2026") == ["2026-09-02"]
+    from datetime import datetime
+
+    import pandas as pd
+
+    from market_intel.db import upsert_df
+
+    upsert_df(seeded_con, "documents", pd.DataFrame([{
+        "doc_id": "sec-test", "ticker": "NVDA", "source": "sec-edgar", "doc_type": "8-K", "title": "NVDA 8-K",
+        "url": "https://sec.gov/x", "published_at": datetime(2026, 9, 3), "fetched_at": datetime(2026, 9, 3),
+        "text": "Date of earliest event reported: September 2, 2026"}]))
+    facts, docs = reference_facts(seeded_con)
+    assert verify_claim(claim("Announced 2026-09-02.", "sec-test"), facts, docs)["all_matched"]
+    assert not verify_claim(claim("Announced 2026-09-05.", "sec-test"), facts, docs)["all_matched"]  # a wrong date still fails
+
+
+def test_distance_from_200_day_average_is_computed_in_code(seeded_con):
+    from market_intel.analytics.loaders import load_price_matrix
+    from market_intel.analytics.ticker import ticker_technicals
+
+    t = ticker_technicals(load_price_matrix(seeded_con, ["AAPL", "SPY"]), "AAPL")
+    assert round((t["last"] / t["sma_200"] - 1) * 100, 1) == pytest.approx(t["pct_vs_sma_200"], abs=0.2)
