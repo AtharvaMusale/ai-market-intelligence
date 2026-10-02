@@ -16,12 +16,11 @@ import duckdb
 import pandas as pd
 from langgraph.graph import END, START, StateGraph
 
-from market_intel.agents.facts import document_blocks, fact_lines, flatten
+from market_intel.agents.facts import document_blocks, fact_lines
 from market_intel.agents.prompts import BRIEFING_SYSTEM, QA_SYSTEM, SECTIONS
 from market_intel.agents.router import route
+from market_intel.agents.tools import assemble_facts, drilldown_tool, rates_tool, regime_tool, sectors_tool
 from market_intel.analytics.loaders import load_price_matrix
-from market_intel.analytics.regime import rates_snapshot, regime_summary, sector_performance
-from market_intel.analytics.ticker import ticker_technicals
 from market_intel.config import ALL_PRICE_TICKERS, BRIEFING_MAX_TOKENS, QA_MAX_TOKENS, WATCHLIST
 from market_intel.retrieval.recent import recent_documents
 from market_intel.retrieval.store import PineconeStore
@@ -77,6 +76,8 @@ def validate_claims(claims: Any, valid_ids: set[str]) -> tuple[list[dict], list[
     for claim in claims if isinstance(claims, list) else []:
         text = claim.get("text") if isinstance(claim, dict) else None
         ids = claim.get("source_ids") if isinstance(claim, dict) else None
+        if isinstance(ids, list):  # tolerate the label slip "FACT regime.score"; the ID itself must still exist
+            ids = [i.removeprefix("FACT ").strip() if isinstance(i, str) else i for i in ids]
         if not isinstance(text, str) or not text.strip() or len(text) > MAX_CLAIM_CHARS:
             dropped.append("bad text")
         elif not isinstance(ids, list) or not ids:
@@ -99,38 +100,22 @@ def build_graph(ctx: AgentContext):
 
     def regime_node(state: State) -> dict:
         try:
-            summary = regime_summary(ctx.prices)
+            regime = regime_tool(ctx.prices)
         except ValueError as exc:
             return {"tool_log": [f"regime: skipped ({exc})"]}
-        keep = ("as_of", "regime", "score", "override", "components", "vol_regime", "trend_state", "sector_breadth")
-        return {"regime": {k: summary[k] for k in keep}, "tool_log": [f"regime: ok ({summary['regime']})"]}
+        return {"regime": regime, "tool_log": [f"regime: ok ({regime['regime']})"]}
 
     def sectors_node(state: State) -> dict:
-        perf = sector_performance(ctx.prices)
-        rows = perf["sectors"]
-        # Rank and leader/laggard lists are computed here, in code, so the LLM never has to compare numbers.
-        ranked = {r["ticker"]: {**r, "rank_21d": i + 1} for i, r in enumerate(rows) if r["ret_21d_pct"] is not None}
-        tickers = list(ranked)
-        out = {
-            "as_of": perf["as_of"],
-            "leaders": tickers[:3],
-            "laggards": tickers[-3:],
-            **{t: {k: v for k, v in r.items() if k != "ticker"} for t, r in ranked.items()},
-        }
-        return {"sectors": out, "tool_log": [f"sectors: ok (leaders {','.join(tickers[:3])})"]}
+        sectors = sectors_tool(ctx.prices)
+        return {"sectors": sectors, "tool_log": [f"sectors: ok (leaders {','.join(sectors['leaders'])})"]}
 
     def rates_node(state: State) -> dict:
-        rates = rates_snapshot(ctx.prices)
+        rates = rates_tool(ctx.prices)
         return {"rates": rates, "tool_log": [f"rates: ok ({len(rates['series'])} series)"]}
 
     def drilldown_node(state: State) -> dict:
-        out, log = {}, []
-        for ticker in state.get("tickers") or list(WATCHLIST):
-            try:
-                out[ticker] = ticker_technicals(ctx.prices, ticker)
-            except ValueError as exc:
-                log.append(f"drilldown {ticker}: skipped ({exc})")
-        return {"drilldown": out, "tool_log": log + [f"drilldown: ok ({','.join(out)})"]}
+        out, skipped = drilldown_tool(ctx.prices, state.get("tickers") or list(WATCHLIST))
+        return {"drilldown": out, "tool_log": skipped + [f"drilldown: ok ({','.join(out)})"]}
 
     def documents_node(state: State) -> dict:
         tickers = state.get("tickers") or list(WATCHLIST)
@@ -151,12 +136,7 @@ def build_graph(ctx: AgentContext):
         return {"documents": docs, "tool_log": [f"documents: ok ({len(docs)} via {how})"]}
 
     def write_node(state: State) -> dict:
-        facts: dict[str, Any] = {}
-        for name in ("regime", "sectors", "rates"):
-            if state.get(name):
-                facts.update(flatten(name, state[name]))
-        for ticker, data in (state.get("drilldown") or {}).items():
-            facts.update(flatten(f"drilldown.{ticker}", data))
+        facts = assemble_facts(state.get("regime"), state.get("sectors"), state.get("rates"), state.get("drilldown"))
         docs = state.get("documents") or []
         if not facts and not docs:
             return {"facts": {}, "draft": "", "tool_log": ["write: skipped (no data)"]}

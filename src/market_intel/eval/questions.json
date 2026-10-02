@@ -1,0 +1,12 @@
+[
+  {"id": "q1", "question": "why did tech fall today?", "expected_tools": ["sectors", "regime", "documents"], "expected_tickers": []},
+  {"id": "q2", "question": "How is AAPL doing?", "expected_tools": ["drilldown", "documents"], "expected_tickers": ["AAPL"]},
+  {"id": "q3", "question": "What are treasury yields doing?", "expected_tools": ["rates"], "expected_tickers": []},
+  {"id": "q4", "question": "What is the VIX telling us about market risk?", "expected_tools": ["regime"], "expected_tickers": []},
+  {"id": "q5", "question": "Which sectors are leading?", "expected_tools": ["sectors"], "expected_tickers": []},
+  {"id": "q6", "question": "Any recent filings for Microsoft?", "expected_tools": ["documents"], "expected_tickers": ["MSFT"]},
+  {"id": "q7", "question": "Is NVDA in an uptrend?", "expected_tools": ["drilldown"], "expected_tickers": ["NVDA"]},
+  {"id": "q8", "question": "Why is financials weak? Any JPM and GS news?", "expected_tools": ["sectors", "documents"], "expected_tickers": ["JPM", "GS"]},
+  {"id": "q9", "question": "Is the yield curve inverted?", "expected_tools": ["rates"], "expected_tickers": []},
+  {"id": "q10", "question": "What is the market regime?", "expected_tools": ["regime"], "expected_tickers": []}
+]

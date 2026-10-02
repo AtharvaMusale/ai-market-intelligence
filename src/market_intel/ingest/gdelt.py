@@ -18,6 +18,7 @@ import requests
 from market_intel.config import NEWS_TIMESPAN, WATCHLIST
 from market_intel.db import upsert_df
 from market_intel.ingest.http import RateLimitedSession
+from market_intel.quality import is_junk_title
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ def parse_articles(payload: dict, ticker: str, keyword: str, fetched_at: datetim
         title = (article.get("title") or "").strip()
         url = article.get("url")
         seen = article.get("seendate")  # e.g. 20260930T123000Z
-        if not title or not url or not seen or keyword.lower() not in title.lower():
+        if not title or not url or not seen or keyword.lower() not in title.lower() or is_junk_title(title):
             continue
         rows.append(
             {

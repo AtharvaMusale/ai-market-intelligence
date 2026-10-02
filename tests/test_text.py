@@ -186,3 +186,16 @@ def test_ingest_news_makes_one_request_and_assigns_tickers():
     assert OneShot.calls == 1 and added == 2
     assert dict(con.execute("SELECT ticker, count(*) FROM documents GROUP BY 1").fetchall()) == {"AAPL": 1, "MSFT": 1}
     assert ingest_news(con, {"AAPL": "Apple", "MSFT": "Microsoft"}, session=OneShot()) == 0  # re-run adds nothing
+
+
+def test_junk_titles_are_filtered_and_8k_cover_is_trimmed():
+    from market_intel.quality import is_junk_title, trim_to_first_item
+
+    assert is_junk_title("For Sale ( 10 Pieces ) New Apple iPhone Unlocked $18 , 990CAD")
+    assert not is_junk_title("Apple shares rise after earnings")
+    assert trim_to_first_item("cover page boilerplate Item 2.02 Results of Operations ...").startswith("Item 2.02")
+    payload = {"articles": [
+        {"url": "https://x.com/1", "title": "Apple iPhone Unlocked for sale", "seendate": "20260930T123000Z"},
+        {"url": "https://x.com/2", "title": "Apple earnings beat", "seendate": "20260930T123000Z"},
+    ]}
+    assert list(parse_articles(payload, "AAPL", "Apple", NOW)["title"]) == ["Apple earnings beat"]

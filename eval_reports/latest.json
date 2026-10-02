@@ -1,0 +1,268 @@
+{
+  "generated_at": "2026-10-02T14:15:34+00:00",
+  "writer": "claude-haiku-4-5-20251001",
+  "as_of": null,
+  "tolerance": {
+    "abs": 0.01,
+    "rel": 0.001
+  },
+  "threshold_numeric_accuracy": 0.95,
+  "briefing": {
+    "claims_written": 20,
+    "claims_kept": 20,
+    "numbers_checked": 53,
+    "numbers_matched": 53,
+    "numeric_match_rate": 1.0,
+    "unsupported_claim_rate": 0.0,
+    "citation_coverage": 1.0,
+    "failures": []
+  },
+  "tool_routing": {
+    "tool_usage_accuracy": 1.0,
+    "passed": 10,
+    "total": 10,
+    "results": [
+      {
+        "id": "q1",
+        "question": "why did tech fall today?",
+        "plan": [
+          "sectors",
+          "regime",
+          "documents"
+        ],
+        "missing_tools": [],
+        "tickers_ok": true,
+        "passed": true
+      },
+      {
+        "id": "q2",
+        "question": "How is AAPL doing?",
+        "plan": [
+          "drilldown",
+          "documents"
+        ],
+        "missing_tools": [],
+        "tickers_ok": true,
+        "passed": true
+      },
+      {
+        "id": "q3",
+        "question": "What are treasury yields doing?",
+        "plan": [
+          "rates"
+        ],
+        "missing_tools": [],
+        "tickers_ok": true,
+        "passed": true
+      },
+      {
+        "id": "q4",
+        "question": "What is the VIX telling us about market risk?",
+        "plan": [
+          "regime"
+        ],
+        "missing_tools": [],
+        "tickers_ok": true,
+        "passed": true
+      },
+      {
+        "id": "q5",
+        "question": "Which sectors are leading?",
+        "plan": [
+          "sectors"
+        ],
+        "missing_tools": [],
+        "tickers_ok": true,
+        "passed": true
+      },
+      {
+        "id": "q6",
+        "question": "Any recent filings for Microsoft?",
+        "plan": [
+          "drilldown",
+          "documents"
+        ],
+        "missing_tools": [],
+        "tickers_ok": true,
+        "passed": true
+      },
+      {
+        "id": "q7",
+        "question": "Is NVDA in an uptrend?",
+        "plan": [
+          "regime",
+          "drilldown",
+          "documents"
+        ],
+        "missing_tools": [],
+        "tickers_ok": true,
+        "passed": true
+      },
+      {
+        "id": "q8",
+        "question": "Why is financials weak? Any JPM and GS news?",
+        "plan": [
+          "sectors",
+          "drilldown",
+          "documents"
+        ],
+        "missing_tools": [],
+        "tickers_ok": true,
+        "passed": true
+      },
+      {
+        "id": "q9",
+        "question": "Is the yield curve inverted?",
+        "plan": [
+          "rates"
+        ],
+        "missing_tools": [],
+        "tickers_ok": true,
+        "passed": true
+      },
+      {
+        "id": "q10",
+        "question": "What is the market regime?",
+        "plan": [
+          "regime"
+        ],
+        "missing_tools": [],
+        "tickers_ok": true,
+        "passed": true
+      }
+    ]
+  },
+  "answers": [
+    {
+      "id": "q1",
+      "claims_written": 1,
+      "claims_kept": 1,
+      "numbers_checked": 3,
+      "numbers_matched": 3,
+      "numeric_match_rate": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "citation_coverage": 1.0,
+      "failures": []
+    },
+    {
+      "id": "q2",
+      "claims_written": 6,
+      "claims_kept": 6,
+      "numbers_checked": 8,
+      "numbers_matched": 8,
+      "numeric_match_rate": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "citation_coverage": 1.0,
+      "failures": []
+    },
+    {
+      "id": "q3",
+      "claims_written": 5,
+      "claims_kept": 5,
+      "numbers_checked": 13,
+      "numbers_matched": 13,
+      "numeric_match_rate": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "citation_coverage": 1.0,
+      "failures": []
+    },
+    {
+      "id": "q4",
+      "claims_written": 3,
+      "claims_kept": 3,
+      "numbers_checked": 4,
+      "numbers_matched": 4,
+      "numeric_match_rate": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "citation_coverage": 1.0,
+      "failures": []
+    },
+    {
+      "id": "q5",
+      "claims_written": 3,
+      "claims_kept": 3,
+      "numbers_checked": 7,
+      "numbers_matched": 7,
+      "numeric_match_rate": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "citation_coverage": 1.0,
+      "failures": []
+    },
+    {
+      "id": "q6",
+      "claims_written": 2,
+      "claims_kept": 2,
+      "numbers_checked": 6,
+      "numbers_matched": 6,
+      "numeric_match_rate": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "citation_coverage": 1.0,
+      "failures": []
+    },
+    {
+      "id": "q7",
+      "claims_written": 3,
+      "claims_kept": 3,
+      "numbers_checked": 7,
+      "numbers_matched": 7,
+      "numeric_match_rate": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "citation_coverage": 1.0,
+      "failures": []
+    },
+    {
+      "id": "q8",
+      "claims_written": 4,
+      "claims_kept": 4,
+      "numbers_checked": 13,
+      "numbers_matched": 13,
+      "numeric_match_rate": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "citation_coverage": 1.0,
+      "failures": []
+    },
+    {
+      "id": "q9",
+      "claims_written": 2,
+      "claims_kept": 2,
+      "numbers_checked": 5,
+      "numbers_matched": 3,
+      "numeric_match_rate": 0.6,
+      "unsupported_claim_rate": 1.0,
+      "citation_coverage": 1.0,
+      "failures": [
+        {
+          "claim": "The 10-year/3-month yield curve proxy is not inverted as of 2026-10-02.",
+          "unmatched": [
+            "2026-10-02"
+          ]
+        },
+        {
+          "claim": "The 10-year Treasury yield (5.201%) exceeds the 13-week Treasury yield (3.973%) by 1.228 percentage points as of 2026-10-02.",
+          "unmatched": [
+            "2026-10-02"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q10",
+      "claims_written": 4,
+      "claims_kept": 4,
+      "numbers_checked": 10,
+      "numbers_matched": 10,
+      "numeric_match_rate": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "citation_coverage": 1.0,
+      "failures": []
+    }
+  ],
+  "passed": true,
+  "llm_usage": {
+    "calls": 11,
+    "cache_hits": 0,
+    "input_tokens": 22091,
+    "output_tokens": 4858,
+    "cost_usd": 0.046381
+  }
+}

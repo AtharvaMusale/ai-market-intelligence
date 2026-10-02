@@ -125,3 +125,13 @@ def test_haiku_client_caches_and_tracks_cost(tmp_path):
     assert first.cost_usd == pytest.approx(0.0035) == estimate_cost(1000, 500)
     assert second.from_cache and second.cost_usd == 0
     assert client.tracker.summary()["calls"] == 2 and client.tracker.cache_hits == 1
+
+
+def test_validator_accepts_fact_label_prefix_but_not_invented_ids(seeded_con):
+    llm = ScriptedLLM({"claims": [
+        {"text": "VIX is 16.0.", "source_ids": ["FACT regime.vol_regime.vix_level"]},
+        {"text": "Invented.", "source_ids": ["FACT regime.nope"]},
+    ]})
+    result = answer_question(make_context(seeded_con, llm), "what is the vix?")
+    assert [c["source_ids"] for c in result["output"]["claims"]] == [["regime.vol_regime.vix_level"]]
+    assert result["validation"]["claims_dropped"] == 1

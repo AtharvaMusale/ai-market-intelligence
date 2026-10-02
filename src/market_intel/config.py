@@ -69,6 +69,11 @@ LLM_CACHE_DIR = PROJECT_ROOT / "data" / "cache" / "llm"
 BRIEFING_MAX_TOKENS = 3000
 QA_MAX_TOKENS = 700
 
+# Evaluation thresholds. Chosen up front, before any real run; do not tune them to make a run pass.
+EVAL_MIN_NUMERIC_ACCURACY = float(os.environ.get("EVAL_MIN_NUMERIC_ACCURACY", "0.95"))
+EVAL_ABS_TOL = 0.01  # a number in a claim may differ from the source value by this much (rounding)
+EVAL_REL_TOL = 0.001  # or by this fraction of the source value, whichever is larger
+
 HISTORY_YEARS = 3  # first-time download depth; enough for 200-day averages and 1y percentiles
 OVERLAP_DAYS = 7  # incremental runs re-fetch this many days to pick up Yahoo's late revisions
 

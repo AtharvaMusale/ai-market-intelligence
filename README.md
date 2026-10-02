@@ -27,7 +27,7 @@ flowchart LR
 - [x] Phase 1: price and yield ingestion and regime analytics
 - [x] Phase 2: news + SEC filings ingestion and Pinecone retrieval (code and offline tests done; live run needs your keys)
 - [x] Phase 3: LangGraph agents (daily briefing + Q&A); verified with the mock writer, real Haiku run is yours to try
-- [ ] Phase 4: evaluation harness
+- [x] Phase 4: evaluation harness
 - [ ] Phase 5: Streamlit app and final README
 
 ## Quick start (macOS, zsh)
@@ -73,6 +73,24 @@ PYTHONPATH=src python -m market_intel.scripts.ask "why did tech fall today?" --d
 ```
 The graph is `plan -> tool nodes -> write -> validate`. Tools wrap the analytics and retrieval code and return structured dicts; Haiku only narrates them. Every claim carries a source ID, either a data path (`regime.vol_regime.vix_level`) or a document ID that maps to a URL in DuckDB. The validate node drops any claim whose source ID does not exist. Haiku responses are cached on disk by input hash, and token usage and estimated cost are logged per run (Haiku 4.5: $1 / $5 per million input / output tokens).
 
+## Phase 4: evaluation
+```bash
+PYTHONPATH=src python -m market_intel.scripts.run_eval --dry-run          # harness check, mock writer
+PYTHONPATH=src python -m market_intel.scripts.run_eval --run-questions    # real Haiku briefing + 10 questions
+```
+The harness extracts every number and date from each claim and checks it against values **recomputed from DuckDB** by the same analytics tools. A number must match one of the values the claim itself cites, within a stated tolerance (absolute 0.01 or 0.1% of the value, whichever is larger; sign is ignored). Reported metrics: numeric match rate, unsupported-claim rate (claims dropped by the citation validator plus claims with an unmatched number), and citation coverage. A fixed set of 10 questions also checks tool routing. The run exits non-zero if numeric accuracy is below `EVAL_MIN_NUMERIC_ACCURACY` (0.95, set before any real run and not tuned).
+
+**Results** (Claude Haiku 4.5, data as of 2026-10-02, saved in `eval_reports/latest.json`):
+
+| Run | Briefing numeric match | Unsupported claims | Citation coverage | Answers (10 questions) mean match |
+|---|---|---|---|---|
+| First real run | 0.911 (41/45), **FAIL** | 0.111 | 1.0 | 0.877 |
+| After prompt fixes | 1.000 (53/53), PASS | 0.0 | 1.0 | 0.960 |
+
+The first run failed honestly: the writer cited incomplete sources (a rank without its `rank` fact, a count without `n_above`/`n_total`), called "above the 50-day average" an "uptrend", and wrote `FACT ` inside some source IDs, so the validator dropped those answers. The fix was to the prompt (bare IDs, cite every number and date, faithful wording) and to strip a stray `FACT ` label; the metric and the threshold did not change. Tool routing: 10/10 questions. In the second run, 9 of 10 answers matched perfectly; one (yield-curve question) stated an "as of" date without citing it. One full run costs about $0.05.
+
+**What the evaluation does not catch:** interpretation ("at 52-week highs", "broad weakness") and direction words ("up" vs "down", since sign is ignored). It checks numbers and citations, not judgment. These are single runs on one day's data, not a statistical benchmark.
+
 ## Project structure
 ```
 src/market_intel/
@@ -84,7 +102,8 @@ src/market_intel/
   retrieval/       chunking.py, store.py (Pinecone), indexer.py (DuckDB -> Pinecone sync)
   agents/          graph.py (LangGraph), tools wiring, router, prompts, mock writer, renderer
   llm/             client.py (Haiku: disk cache, cost log)
-  scripts/         run_phase1.py, run_phase2.py, run_briefing.py, ask.py
+  eval/            claims.py (parse numbers), verify.py (check vs DuckDB), questions.py + questions.json
+  scripts/         run_phase1.py, run_phase2.py, run_briefing.py, ask.py, run_eval.py
 tests/             offline pytest suite
 .claude/rules/     detailed rules for AI coding tools
 AGENTS.md, CLAUDE.md

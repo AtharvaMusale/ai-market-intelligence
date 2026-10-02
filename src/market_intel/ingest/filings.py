@@ -17,6 +17,7 @@ import requests
 from market_intel.config import FILINGS_LOOKBACK_DAYS, SEC_FORMS, WATCHLIST, get_sec_user_agent
 from market_intel.db import upsert_df
 from market_intel.ingest.http import RateLimitedSession
+from market_intel.quality import trim_to_first_item
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +132,7 @@ def ingest_filings(
                 if filing["form"] != "8-K":
                     text = extract_mdna(text, MAX_CHARS[filing["form"]])
                 else:
-                    text = text[: MAX_CHARS["8-K"]]
+                    text = trim_to_first_item(text)[: MAX_CHARS["8-K"]]
                 rows.append(
                     {
                         "doc_id": filing["doc_id"],
