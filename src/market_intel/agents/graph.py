@@ -21,6 +21,7 @@ from market_intel.agents.prompts import BRIEFING_SYSTEM, QA_SYSTEM, SECTIONS
 from market_intel.agents.router import route
 from market_intel.agents.tools import assemble_facts, drilldown_tool, rates_tool, regime_tool, sectors_tool
 from market_intel.analytics.loaders import load_price_matrix
+from market_intel.quality import describe_document, recency_label
 from market_intel.config import ALL_PRICE_TICKERS, BRIEFING_MAX_TOKENS, QA_MAX_TOKENS, WATCHLIST
 from market_intel.retrieval.recent import recent_documents
 from market_intel.retrieval.store import PineconeStore
@@ -61,6 +62,12 @@ class AgentContext:
 def make_context(con, llm, store: PineconeStore | None = None, as_of: str | None = None) -> AgentContext:
     prices = load_price_matrix(con, ALL_PRICE_TICKERS, as_of=as_of)
     return AgentContext(con=con, prices=prices, llm=llm, store=store, as_of=as_of)
+
+
+def dedupe_documents(docs: list[dict]) -> list[dict]:
+    """One entry per document, keeping the first (most relevant) one. Pinecone returns several chunks of the same filing."""
+    seen: set[str] = set()
+    return [d for d in docs if not (d["doc_id"] in seen or seen.add(d["doc_id"]))]
 
 
 def extract_json(text: str) -> dict:
@@ -117,6 +124,14 @@ def build_graph(ctx: AgentContext):
         out, skipped = drilldown_tool(ctx.prices, state.get("tickers") or list(WATCHLIST))
         return {"drilldown": out, "tool_log": skipped + [f"drilldown: ok ({','.join(out)})"]}
 
+    def annotate(docs: list[dict]) -> list[dict]:
+        """Add a plain-English description and a recency label, both computed in code from the document and the as-of date."""
+        today = ctx.prices.index.max().date()
+        for d in docs:
+            d["desc"] = describe_document(d["doc_type"], d.get("title") or "")
+            d["recency"] = recency_label((today - pd.Timestamp(d["date"]).date()).days)
+        return docs
+
     def documents_node(state: State) -> dict:
         tickers = state.get("tickers") or list(WATCHLIST)
         if state["mode"] == "qa" and ctx.store is not None:
@@ -129,10 +144,12 @@ def build_graph(ctx: AgentContext):
                  "url": h["url"], "date": h["date"], "excerpt": h["text"]}
                 for h in hits
             ]
+            docs = annotate(dedupe_documents(docs))
             how = "pinecone search"
         else:
             docs = recent_documents(ctx.con, tickers, ctx.as_of)
             how = "recent documents"
+        docs = annotate(dedupe_documents(docs))
         return {"documents": docs, "tool_log": [f"documents: ok ({len(docs)} via {how})"]}
 
     def write_node(state: State) -> dict:

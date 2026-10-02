@@ -33,15 +33,18 @@ def app(tmp_path, monkeypatch):
 def test_app_renders_panels_without_exception(app):
     assert not app.exception
     assert [t.label for t in app.tabs] == ["Market", "Daily brief", "Ask a question", "Evaluation"]
-    assert any("Regime" == m.label for m in app.metric)
+    text = " ".join(m.value for m in app.markdown)
+    assert "Market regime" in text and "Data as of" in text
 
 
 def test_generate_briefing_shows_cited_claims(app):
     app.button(key="gen_brief").click().run()
     assert not app.exception
     text = " ".join(m.value for m in app.markdown)
-    assert "Daily market briefing" in text and "regime.regime = " in text  # data citations show their values
-    assert "[news-0001](https://a.com/1)" in text  # document citations are links
+    assert "Market regime: neutral" in text  # data citations show a readable label and the value
+    assert 'title="regime.regime"' in text  # the raw path stays available on hover for auditing
+    assert 'href="https://a.com/1"' in text and ">news-0001<" in text  # document citations are links
+    assert "claims cited and verified" in text
 
 
 def test_question_box_runs_routed_tools(app):
@@ -49,3 +52,43 @@ def test_question_box_runs_routed_tools(app):
     app.button(key="ask").click().run()
     assert not app.exception
     assert any("How is AAPL doing?" in m.value for m in app.markdown)
+
+
+def test_haiku_is_default_writer_only_when_key_is_set(app, monkeypatch):
+    assert app.radio[0].value.startswith("Mock")  # no key in this fixture
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-not-real")
+    with_key = AppTest.from_file(APP, default_timeout=60).run()
+    assert with_key.radio[0].value.startswith("Claude")
+
+
+def test_html_output_escapes_untrusted_text(seeded_con):
+    from market_intel.app.components import result_html
+
+    nasty = {"sections": [{"name": "notable_events", "claims": [
+        {"text": "<script>alert(1)</script> Apple", "source_ids": ["news-0001", "<img src=x onerror=alert(1)>"]}]}]}
+    html = result_html(nasty, seeded_con, {})
+    assert "<script>" not in html and "<img" not in html and "&lt;script&gt;" in html
+
+
+def test_app_survives_missing_sector_data(tmp_path, monkeypatch):
+    """A database with no sector ETF prices must show a message, not a traceback."""
+    db = tmp_path / "partial.duckdb"
+    con = connect(db)
+    wide = synthetic_prices()[["SPY", "^VIX"]]
+    upsert_df(con, "prices", to_long(wide))
+    con.close()
+    monkeypatch.setenv("DUCKDB_PATH", str(db))
+    from streamlit import cache_data, cache_resource
+    cache_data.clear(); cache_resource.clear()
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    assert not at.exception
+    assert any("No price data yet" in w.value for w in at.warning)
+
+
+def test_app_releases_the_database_so_data_refresh_can_write(app, tmp_path):
+    """After a page run the database must be writable again (no lingering read lock)."""
+    import os
+
+    con = connect(os.environ["DUCKDB_PATH"])  # a write connection; raises if the app still holds a lock
+    con.execute("SELECT count(*) FROM prices")
+    con.close()

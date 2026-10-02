@@ -67,9 +67,14 @@ _DDL = [
 ]
 
 
-def connect(path: str | Path | None = None) -> duckdb.DuckDBPyConnection:
-    """Open DuckDB (use ":memory:" for tests) and make sure the tables exist."""
+def connect(path: str | Path | None = None, read_only: bool = False) -> duckdb.DuckDBPyConnection:
+    """Open DuckDB (use ":memory:" for tests) and make sure the tables exist.
+
+    read_only=True never writes, and lets several readers (scripts, the app) share the file.
+    """
     target = get_duckdb_path() if path is None else path
+    if read_only:
+        return duckdb.connect(str(target), read_only=True)
     if str(target) != ":memory:":
         Path(target).parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(target))

@@ -6,9 +6,9 @@ import re
 from market_intel.config import SECTOR_ETFS, WATCHLIST
 
 SECTOR_WORDS = {
-    "tech": "XLK", "technology": "XLK", "financial": "XLF", "banks": "XLF", "energy": "XLE", "oil": "XLE",
-    "health": "XLV", "healthcare": "XLV", "consumer": "XLY", "staples": "XLP", "industrial": "XLI",
-    "materials": "XLB", "utilities": "XLU", "real estate": "XLRE", "communication": "XLC",
+    "tech": "VGT", "technology": "VGT", "financial": "VFH", "banks": "VFH", "energy": "VDE", "oil": "VDE",
+    "health": "VHT", "healthcare": "VHT", "consumer": "VCR", "staples": "VDC", "industrial": "VIS",
+    "materials": "VAW", "utilities": "VPU", "real estate": "VNQ", "communication": "VOX",
 }
 RATE_WORDS = ("yield", "rate", "treasury", "curve", "bond")
 REGIME_WORDS = ("vix", "volatil", "regime", "risk", "market", "selloff", "sell-off", "rally", "fall", "fell", "drop", "trend", "breadth")

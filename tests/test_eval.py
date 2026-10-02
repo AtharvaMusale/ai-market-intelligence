@@ -32,9 +32,9 @@ def test_correct_claim_passes_and_planted_wrong_number_is_caught(seeded_con):
 
 def test_tolerance_allows_rounding_but_not_real_differences(seeded_con):
     facts, docs = reference_facts(seeded_con)
-    v = facts["sectors.XLK.ret_21d_pct"]
-    assert verify_claim(claim(f"XLK {round(v, 2)}%.", "sectors.XLK.ret_21d_pct"), facts, docs)["all_matched"]
-    assert not verify_claim(claim(f"XLK {v + 0.5}%.", "sectors.XLK.ret_21d_pct"), facts, docs)["all_matched"]
+    v = facts["sectors.VGT.ret_21d_pct"]
+    assert verify_claim(claim(f"VGT {round(v, 2)}%.", "sectors.VGT.ret_21d_pct"), facts, docs)["all_matched"]
+    assert not verify_claim(claim(f"VGT {v + 0.5}%.", "sectors.VGT.ret_21d_pct"), facts, docs)["all_matched"]
 
 
 def test_number_must_match_a_cited_source_not_any_source(seeded_con):

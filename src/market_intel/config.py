@@ -9,18 +9,19 @@ from dotenv import load_dotenv
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(PROJECT_ROOT / ".env")
 
+# Vanguard sector ETFs (track MSCI US IMI sector indexes, so they include mid and small caps).
 SECTOR_ETFS: dict[str, str] = {
-    "XLK": "Technology",
-    "XLF": "Financials",
-    "XLE": "Energy",
-    "XLV": "Health Care",
-    "XLY": "Consumer Discretionary",
-    "XLP": "Consumer Staples",
-    "XLI": "Industrials",
-    "XLB": "Materials",
-    "XLU": "Utilities",
-    "XLRE": "Real Estate",
-    "XLC": "Communication Services",
+    "VGT": "Information Technology",
+    "VFH": "Financials",
+    "VDE": "Energy",
+    "VHT": "Health Care",
+    "VCR": "Consumer Discretionary",
+    "VDC": "Consumer Staples",
+    "VIS": "Industrials",
+    "VAW": "Materials",
+    "VPU": "Utilities",
+    "VNQ": "Real Estate",
+    "VOX": "Communication Services",
 }
 
 BENCHMARKS: dict[str, str] = {

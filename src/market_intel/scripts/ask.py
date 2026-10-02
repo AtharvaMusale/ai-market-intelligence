@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    con = connect()
+    con = connect(read_only=True)
     llm = MockLLM() if args.dry_run else HaikuClient()
     store = None
     if not args.no_search:

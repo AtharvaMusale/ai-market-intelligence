@@ -139,6 +139,6 @@ def test_normalize_download_warns_on_empty_ticker(caplog):
     cols = pd.MultiIndex.from_product([["SPY"], fields])
     raw = pd.DataFrame(np.ones((3, len(fields))), index=idx, columns=cols)
     with caplog.at_level(logging.WARNING):
-        out = normalize_download(raw, ["SPY", "XLK"])
+        out = normalize_download(raw, ["SPY", "VGT"])
     assert set(out["ticker"]) == {"SPY"}
-    assert "No price data returned for XLK" in caplog.text
+    assert "No price data returned for VGT" in caplog.text

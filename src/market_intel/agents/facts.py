@@ -41,7 +41,7 @@ def sanitize_excerpt(text: str, limit: int = 400) -> str:
 def document_blocks(docs: list[dict]) -> str:
     """Wrap documents in tags the system prompt declares untrusted."""
     return "\n".join(
-        f'<untrusted_document id="{d["doc_id"]}" ticker="{d["ticker"]}" type="{d["doc_type"]}" date="{d["date"]}">'
+        f'<untrusted_document id="{d["doc_id"]}" ticker="{d["ticker"]}" type="{d["doc_type"]}" date="{d["date"]}" desc="{d.get("desc", "")}" recency="{d.get("recency", "")}">'
         f'{sanitize_excerpt(d.get("title") or "", 200)} | {sanitize_excerpt(d.get("excerpt") or "")}'
         "</untrusted_document>"
         for d in docs

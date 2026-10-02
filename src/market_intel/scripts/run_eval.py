@@ -34,7 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
-    con = connect(args.db)
+    con = connect(args.db, read_only=True)
     llm = MockLLM() if args.dry_run else HaikuClient()
     ctx = make_context(con, llm, as_of=args.as_of)
     facts, docs = reference_facts(con, args.as_of)

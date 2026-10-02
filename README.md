@@ -163,7 +163,11 @@ PYTHONPATH=src .venv/bin/streamlit run src/market_intel/app/streamlit_app.py
 ```
 Regime panel, sector heatmap (1/5/21-day returns, ranked), Treasury yield chart, a daily brief where every claim shows its citation (data citations display `path = value`; filings and headlines are links to the source), a Q&A box using the same router and tools, and an Evaluation tab showing the saved results. The app opens DuckDB **read-only**, defaults to the free mock writer, and enables Claude Haiku only if `ANTHROPIC_API_KEY` is set. Keys are never displayed.
 
-![Daily brief with citations](docs/app-brief.jpg)
+The look follows the author's portfolio site (black base, hairline rails, Geist fonts, spectrum accent). Styling lives in `.streamlit/config.toml` and `src/market_intel/app/theme.py`; it is dark-only.
+
+![Market tab: sector heatmap and yields](docs/app-market.jpg)
+
+![A cited answer with its verdict first](docs/app-answer.jpg)
 
 ## Project structure
 ```
@@ -177,7 +181,7 @@ src/market_intel/
   agents/          graph.py (LangGraph), tools wiring, router, prompts, mock writer, renderer
   llm/             client.py (Haiku: disk cache, cost log)
   eval/            claims.py (parse numbers), verify.py (check vs DuckDB), questions.py + questions.json
-  app/             streamlit_app.py
+  app/             streamlit_app.py (layout), theme.py (CSS), components.py (escaped HTML pieces)
   scripts/         run_phase1.py, run_phase2.py, run_briefing.py, ask.py, run_eval.py
 tests/             offline pytest suite
 .claude/rules/     detailed rules for AI coding tools
@@ -192,7 +196,7 @@ AGENTS.md, CLAUDE.md
 ## Limitations
 - Yahoo Finance data is unofficial and may be delayed, revised, or missing.
 - Regime thresholds (VIX bands, breadth cutoffs, score cutoffs) are transparent heuristics, not statistically tuned.
-- Breadth uses the 11 sector ETFs as a proxy, not the full constituent universe.
+- Breadth uses the 11 Vanguard sector ETFs (VGT, VFH, VDE, VHT, VCR, VDC, VIS, VAW, VPU, VNQ, VOX) as a proxy, not the full constituent universe. They track MSCI US IMI sector indexes, so they include mid and small caps and differ from the S&P 500 sector funds. SPY remains the market benchmark.
 - No fed funds rate, unemployment, 2-year yield, or credit-spread data. The yield-curve measure is a 10-year minus 13-week proxy, not the standard 10Y-2Y spread.
 - The evaluation checks numbers and citations, not interpretation or direction words; results are single runs on one day's data, not a statistical benchmark.
 - News is GDELT headlines only (no article text), so event explanations are thin; filings give official text but no numeric fundamentals.
