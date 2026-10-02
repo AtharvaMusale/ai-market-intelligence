@@ -1,0 +1,17 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Data and caches (never commit the database or LLM/embedding caches)
+data/*.duckdb*
+data/cache/
+.cache/
+
+# macOS
+.DS_Store

@@ -1,0 +1,20 @@
+# Phase 1: data + analytics
+duckdb>=1.0
+pandas>=2.0
+numpy>=1.26
+yfinance>=0.2.40
+requests>=2.31
+python-dotenv>=1.0
+
+# Phase 2: retrieval
+pinecone
+
+# Phase 3: orchestration + LLM
+langgraph
+anthropic
+
+# Phase 5: UI
+streamlit
+
+# Testing
+pytest>=8.0
