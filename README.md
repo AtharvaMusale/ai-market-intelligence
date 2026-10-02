@@ -28,7 +28,7 @@ flowchart LR
 - [x] Phase 2: news + SEC filings ingestion and Pinecone retrieval (code and offline tests done; live run needs your keys)
 - [x] Phase 3: LangGraph agents (daily briefing + Q&A); verified with the mock writer, real Haiku run is yours to try
 - [x] Phase 4: evaluation harness
-- [ ] Phase 5: Streamlit app and final README
+- [x] Phase 5: Streamlit app and final README
 
 ## Quick start (macOS, zsh)
 Run everything from the project root (`ai-market-intelligence/`).
@@ -91,6 +91,14 @@ The first run failed honestly: the writer cited incomplete sources (a rank witho
 
 **What the evaluation does not catch:** interpretation ("at 52-week highs", "broad weakness") and direction words ("up" vs "down", since sign is ignored). It checks numbers and citations, not judgment. These are single runs on one day's data, not a statistical benchmark.
 
+## Phase 5: the app
+```bash
+PYTHONPATH=src .venv/bin/streamlit run src/market_intel/app/streamlit_app.py
+```
+Regime panel, sector heatmap (1/5/21-day returns, ranked), Treasury yield chart, a daily brief where every claim shows its citation (data citations display `path = value`; filings and headlines are links to the source), a Q&A box using the same router and tools, and an Evaluation tab showing the saved results. The app opens DuckDB **read-only**, defaults to the free mock writer, and enables Claude Haiku only if `ANTHROPIC_API_KEY` is set. Keys are never displayed.
+
+![Daily brief with citations](docs/app-brief.jpg)
+
 ## Project structure
 ```
 src/market_intel/
@@ -103,6 +111,7 @@ src/market_intel/
   agents/          graph.py (LangGraph), tools wiring, router, prompts, mock writer, renderer
   llm/             client.py (Haiku: disk cache, cost log)
   eval/            claims.py (parse numbers), verify.py (check vs DuckDB), questions.py + questions.json
+  app/             streamlit_app.py
   scripts/         run_phase1.py, run_phase2.py, run_briefing.py, ask.py, run_eval.py
 tests/             offline pytest suite
 .claude/rules/     detailed rules for AI coding tools
@@ -110,13 +119,15 @@ AGENTS.md, CLAUDE.md
 ```
 
 ## Cost notes
-- Phases 0-1 cost nothing: free data, no LLM calls.
-- The only paid spend will be Haiku calls (cached by hash, capped `max_tokens`, cost logged per run, `--dry-run` mock mode).
-- Pinecone free-tier limits will be checked against current docs and recorded here in Phase 2.
+- Data is free (Yahoo, SEC EDGAR, GDELT). Pinecone uses the free Starter plan (see limits above); the 329-chunk index used about 77k of 5M monthly embedding tokens.
+- The only paid spend is Claude Haiku 4.5 ($1 / $5 per million input / output tokens). One briefing is about 6.8k input + 1.8k output tokens, roughly **1.6 cents**; a full evaluation (briefing + 10 questions) is about **5 cents**. Responses are cached on disk by input hash, so repeats cost nothing, and `--dry-run` / the app's mock writer cost nothing.
+- Total Haiku spend building and evaluating this project: roughly 15 cents.
 
 ## Limitations
 - Yahoo Finance data is unofficial and may be delayed, revised, or missing.
 - Regime thresholds (VIX bands, breadth cutoffs, score cutoffs) are transparent heuristics, not statistically tuned.
 - Breadth uses the 11 sector ETFs as a proxy, not the full constituent universe.
 - No fed funds rate, unemployment, 2-year yield, or credit-spread data. The yield-curve measure is a 10-year minus 13-week proxy, not the standard 10Y-2Y spread.
+- The evaluation checks numbers and citations, not interpretation or direction words; results are single runs on one day's data, not a statistical benchmark.
+- News is GDELT headlines only (no article text), so event explanations are thin; filings give official text but no numeric fundamentals.
 - This is a research and demonstration tool. It is **not investment advice**.
