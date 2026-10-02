@@ -44,6 +44,72 @@ PYTHONPATH=src python -m market_intel.scripts.run_phase1
 
 Add `--skip-ingest` to reuse data already in DuckDB, or `--as-of 2025-06-30` to replay a past date.
 
+## How to test this app, and what it actually does
+
+### What it does, in plain terms
+Each day's workflow, end to end:
+1. **Ingest** free data into a local DuckDB file: prices and Treasury yields (Yahoo), SEC filings (EDGAR), news headlines (GDELT).
+2. **Compute** every number in code: sector returns, VIX regime, SPY trend, breadth, yields, and per-stock technicals (RSI, moving averages, drawdown).
+3. **Retrieve** recent filings and headlines (Pinecone semantic search for questions, or the latest stored documents).
+4. **Narrate**: Claude Haiku 4.5 receives only those numbers and excerpts, and writes short claims. Each claim must list its sources: a data path like `regime.vol_regime.vix_level`, or a document ID that links to the filing or article.
+5. **Validate**: any claim whose source does not exist is dropped before you see it.
+6. **Evaluate**: a separate harness recomputes every number from DuckDB and checks each claim's numbers against the sources it cites.
+
+What it does **not** do: give investment advice, predict prices, calculate anything in the LLM, or use data outside the sources in the provenance table.
+
+### 1. Automated tests (offline, free, about 5 seconds)
+```bash
+source .venv/bin/activate
+pytest
+```
+59 tests, no network, no API keys, no real database (synthetic data and an in-memory DuckDB):
+
+| File | Tests | Checks |
+|---|---|---|
+| `test_analytics.py` | 19 | regime maths, VIX thresholds, sector sorting, risk-off on high VIX, upsert idempotency, no look-ahead in loaders |
+| `test_text.py` | 14 | chunking, deterministic vector IDs, junk-headline filter, EDGAR/GDELT parsing, Pinecone batching and filters (mocked) |
+| `test_agents.py` | 12 | the LangGraph flow, tool routing, citation validator, prompt-injection boxing, Haiku cache and cost maths |
+| `test_eval.py` | 11 | planted wrong numbers are caught, tolerance, thresholds, question routing |
+| `test_app.py` | 3 | the Streamlit app renders, generates a cited brief, and answers a question |
+
+### 2. Try the app (about 5 minutes, free)
+Run `PYTHONPATH=src streamlit run src/market_intel/app/streamlit_app.py` and open the URL it prints. Needs the database from Phase 1 (`run_phase1`).
+
+| Step | What you should see |
+|---|---|
+| Page loads | Regime, VIX, SPY trend, breadth and realized-vol tiles, with a "Data as of" date |
+| **Market** tab | A sector heatmap ranked by 21-day return, and a 1-year chart of the 13-week, 5-year, 10-year and 30-year yields |
+| **Daily brief** tab, click *Generate briefing* (Mock writer) | Six sections. Data citations appear as `path = value`; filings and headlines are clickable links. "Citation check: N of N claims kept." |
+| **Ask a question**, try *why did tech fall today?* | An expandable "Tools run" log (sectors, regime, documents) and a cited answer |
+| Ask *How is AAPL doing?* | The drill-down tool runs and AAPL technicals appear in the answer |
+| Change **As of** in the sidebar | Every number recomputes using only data up to that date |
+| **Evaluation** tab | The saved results: numeric match rate, unsupported claims, citation coverage, tool routing |
+
+The mock writer reads literally (for example "regime.score is 0") because it copies facts verbatim. It exists so you can test the whole pipeline for free. Choose **Claude Haiku 4.5** in the sidebar (shown only if `ANTHROPIC_API_KEY` is set) for natural prose; one briefing costs about 1.6 cents and repeats are free from the cache.
+
+### 3. Command-line checks
+```bash
+PYTHONPATH=src python -m market_intel.scripts.run_briefing --dry-run
+PYTHONPATH=src python -m market_intel.scripts.ask "why did tech fall today?" --dry-run --no-search
+PYTHONPATH=src python -m market_intel.scripts.run_eval --dry-run
+```
+Each prints which tools ran, the cited result, a validation line (`claims_dropped` should be 0 for the mock writer), and LLM usage (`cost_usd: 0.0`). The eval dry run proves the harness works; it does not measure model quality, because the mock copies numbers exactly.
+
+### 4. Real-model check (about 5 cents)
+```bash
+PYTHONPATH=src python -m market_intel.scripts.run_eval --run-questions
+```
+This is the meaningful test. It writes a real briefing, answers the 10 fixed questions, and checks every number against DuckDB. Exit code 0 means numeric accuracy met the 0.95 threshold; 1 means it did not. The report is saved to `eval_reports/latest.json`.
+
+### What a problem looks like
+| Symptom | Likely cause |
+|---|---|
+| "No database found" in the app | Run `run_phase1` first |
+| Fewer headlines than expected, or GDELT warnings | GDELT throttles; wait 20-30 minutes and re-run (filings are unaffected) |
+| Claims dropped in "Citation check" | The writer cited a source that does not exist; the validator removed it, which is correct |
+| Eval exits 1 | A number in a claim did not match its cited source; the report lists each unmatched number |
+| Briefing says "No briefing was produced" | The model output was not valid JSON. A truncated answer is never cached, so re-running retries; other bad output is cached by input, so change the prompt or data before retrying |
+
 ## Data provenance
 | Source | Used for | Terms followed |
 |---|---|---|
