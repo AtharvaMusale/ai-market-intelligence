@@ -126,3 +126,70 @@ def test_distance_from_200_day_average_is_computed_in_code(seeded_con):
 
     t = ticker_technicals(load_price_matrix(seeded_con, ["AAPL", "SPY"]), "AAPL")
     assert round((t["last"] / t["sma_200"] - 1) * 100, 1) == pytest.approx(t["pct_vs_sma_200"], abs=0.2)
+
+
+def _facts():
+    return {"drilldown.AAPL.trend": "downtrend", "drilldown.AAPL.rsi_zone": "neutral", "drilldown.AAPL.vs_spy_21d": "underperforming SPY",
+            "drilldown.AAPL.verdict": "uptrend, outperforming SPY over 21 days, RSI overbought", "drilldown.AAPL.drawdown_from_52w_high_pct": -5.0,
+            "drilldown.AAPL.ret_21d_pct": -9.0, "drilldown.AAPL.ret_21d_vs_spy_pct": -3.2, "drilldown.AAPL.pct_vs_sma_200": 14.99,
+            "drilldown.AAPL.sma_200": 288.79, "regime.components.trend": 1}
+
+
+def test_direction_check_catches_wrong_sign_but_not_level_facts_or_clause_order():
+    f = _facts()
+    wrong = verify_claim(claim("AAPL is up 9% over 21 days.", "drilldown.AAPL.ret_21d_pct"), f, {})
+    right = verify_claim(claim("AAPL is down 9% over 21 days.", "drilldown.AAPL.ret_21d_pct"), f, {})
+    assert not wrong["all_matched"] and wrong["direction"][0]["said"] == "up" and right["all_matched"]
+    # A level fact: "below its 200-day average of 288.79" describes position, not the sign of 288.79.
+    level = verify_claim(claim("AAPL fell below its 200-day average of 288.79.", "drilldown.AAPL.sma_200"), f, {})
+    assert level["all_matched"] and level["direction"] == []
+    # The direction word after the number wins, and a clause break stops the look-back.
+    two = verify_claim(claim("AAPL trades 14.99% above its 200-day average and 5.0% below its 52-week high.",
+                             "drilldown.AAPL.pct_vs_sma_200", "drilldown.AAPL.drawdown_from_52w_high_pct"), f, {})
+    assert two["all_matched"] and len(two["direction"]) == 2
+
+
+def test_interpretation_rules():
+    f = _facts()
+    bad_trend = verify_claim(claim("AAPL is in an uptrend.", "drilldown.AAPL.trend"), f, {})
+    assert any("uptrend" in i for i in bad_trend["interpretation"])
+    uncited = verify_claim(claim("AAPL is in a downtrend.", "drilldown.AAPL.ret_21d_pct"), f, {})
+    assert any("without citing a trend fact" in i for i in uncited["interpretation"])
+    assert not verify_claim(claim("AAPL is in a downtrend.", "drilldown.AAPL.trend"), f, {})["interpretation"]
+    # the score component is not a trend label
+    assert verify_claim(claim("Combining an uptrend.", "regime.components.trend"), f, {})["interpretation"]
+    # the verdict fact states RSI zone and relative performance, so quoting it is valid evidence
+    ok = verify_claim(claim("AAPL: uptrend, outperforming SPY, RSI overbought.", "drilldown.AAPL.verdict"), f, {})
+    assert ok["interpretation"] == []
+    assert any("oversold" in i for i in verify_claim(claim("RSI shows oversold conditions.", "drilldown.AAPL.rsi_zone"), f, {})["interpretation"])
+    assert any("52-week high" in i for i in verify_claim(claim("AAPL is at its 52-week high.", "drilldown.AAPL.drawdown_from_52w_high_pct"), f, {})["interpretation"])
+    assert any("underperform" in i for i in verify_claim(claim("AAPL is outperforming SPY.", "drilldown.AAPL.vs_spy_21d"), f, {})["interpretation"])
+
+
+def test_new_metrics_appear_in_the_report(seeded_con):
+    facts, docs = reference_facts(seeded_con)
+    out = {"claims": [claim("AAPL is up 9%.", "drilldown.AAPL.ret_21d_pct")]}
+    facts["drilldown.AAPL.ret_21d_pct"] = -9.0
+    rep = evaluate_output(out, {"claims_dropped": 0}, facts, docs)
+    assert rep["direction_checked"] == 1 and rep["direction_errors"] == 1 and rep["unsupported_claim_rate"] == 1.0
+    assert "direction: said up, data is down" in rep["failures"][0]["unmatched"][0]
+
+
+def test_history_replay_is_point_in_time_and_refuses_unconfirmed_spend(tmp_path, capsys):
+    from market_intel.scripts.run_eval_history import main as history_main, replay_dates, summarize
+
+    db = tmp_path / "h.duckdb"
+    con = connect(db)
+    upsert_df(con, "prices", to_long(synthetic_prices()))
+    con.close()
+    out = tmp_path / "history.json"
+    assert history_main(["--days", "5", "--db", str(db), "--out", str(out)]) == 0  # mock writer, free
+    report = json.loads(out.read_text())
+    assert report["writer"] == "mock" and len(report["dates"]) == 5
+    assert report["dates"] == sorted(report["dates"], key=lambda r: r["as_of"])
+    assert report["summary"]["dates_below_threshold"] == 0
+    # asking for Haiku without --confirm-cost must stop before any call and return a distinct exit code
+    assert history_main(["--days", "5", "--haiku", "--db", str(db), "--out", str(out)]) == 2
+    assert "Refusing to call Haiku" in capsys.readouterr().out
+    assert summarize([{"numeric_match_rate": 0.9, "direction_errors": 1, "direction_checked": 4,
+                       "interpretation_issues": 2, "citation_coverage": 1.0}], 0.95)["dates_below_threshold"] == 1

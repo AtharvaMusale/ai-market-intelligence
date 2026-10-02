@@ -15,3 +15,6 @@ data/cache/
 
 # macOS
 .DS_Store
+
+# Mock-writer evaluation output is a harness check, not a result
+eval_reports/*-mock.json

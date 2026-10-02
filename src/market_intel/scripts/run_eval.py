@@ -69,6 +69,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  numeric match rate:     {b['numeric_match_rate']}")
     print(f"  unsupported-claim rate: {b['unsupported_claim_rate']}")
     print(f"  citation coverage:      {b['citation_coverage']}")
+    print(f"  direction errors:       {b['direction_errors']} of {b['direction_checked']} checked")
+    print(f"  interpretation issues:  {b['interpretation_issues']}")
     for f in b["failures"]:
         print(f"  UNMATCHED {f['unmatched']} in: {f['claim']}")
     print(f"Tool routing: {r['passed']}/{r['total']} questions routed as expected")

@@ -166,6 +166,13 @@ The first run failed honestly: the writer cited incomplete sources (a rank witho
 
 **Not re-measured:** these fixes are covered by unit tests, but the evaluation has not been re-run since them, to avoid further paid Haiku calls. Re-running it (about 5 cents) is the next step before treating the numbers above as current. The 0.95 threshold has not changed.
 
+**Direction and interpretation checks.** Beyond matching numbers, the harness now checks that wording agrees with the data:
+- *Direction:* "down 9%" fails if the cited return is positive. It only applies to signed facts (returns, spreads, distance from an average), not levels such as a price or moving average, and it reads the direction word next to each number ("3.03% above ..." and "up 0.53% ...").
+- *Interpretation:* explicit rules for a few phrases. "Uptrend" or "downtrend" must match a cited trend fact, "overbought" or "oversold" the cited RSI zone, "outperform" or "underperform" the cited relative-performance fact, and "at or near a 52-week high" requires a drop of 1% or less.
+- *Validated on real output (no cost):* run over all 226 real Haiku claims in the response cache, it made 43 direction checks with 0 errors, and flagged 5 interpretation issues. Four were genuine: for example "only 2 of 11 sectors in uptrend" (meaning above their 50-day average) and "potential oversold conditions" at an RSI of 32.0 whose zone is neutral. The fifth was a bug in the first version of the rule, now fixed with a regression test.
+
+**Accuracy over time.** `run_eval_history` replays the briefing as of each of the last N trading days using only data available then (`--days 20`). It defaults to the free mock writer, which only proves the harness works (a mock score of 1.0 is not a model result), and refuses to call Haiku unless you pass `--haiku --confirm-cost` (about 1.6 cents per date). A real replay is not yet part of the results above.
+
 **What the evaluation does not catch:** interpretation ("at 52-week highs", "broad weakness") and direction words ("up" vs "down", since sign is ignored). It checks numbers and citations, not judgment. These are single runs on one day's data, not a statistical benchmark.
 
 ## Phase 5: the app

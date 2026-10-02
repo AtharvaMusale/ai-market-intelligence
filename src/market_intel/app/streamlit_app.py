@@ -26,6 +26,7 @@ from market_intel.llm.client import HaikuClient
 from market_intel.retrieval.store import PineconeStore
 
 EVAL_REPORT = PROJECT_ROOT / "eval_reports" / "latest.json"
+EVAL_HISTORY = PROJECT_ROOT / "eval_reports" / "history.json"  # real-writer replay only; mock replays are not shown
 REGIME_LABELS = {"risk_on": "Risk-on", "neutral": "Neutral", "risk_off": "Risk-off"}
 
 
@@ -151,6 +152,19 @@ def eval_tab() -> None:
         "PASS" if passed else "FAIL", f"threshold {report['threshold_numeric_accuracy']}",
         f"writer {report['writer']}", f"generated {report['generated_at'][:10]}",
     ]), unsafe_allow_html=True)
+    if EVAL_HISTORY.exists():
+        history = json.loads(EVAL_HISTORY.read_text())
+        df = pd.DataFrame(history["dates"])
+        st.markdown(ui.spacer() + ui.section("05", "Over time", "Accuracy across dates",
+                    f"The briefing replayed as of each of {history['summary']['dates']} past dates, using only data available then."), unsafe_allow_html=True)
+        chart = alt.Chart(df).mark_line(point=True, strokeWidth=2, color="#22d3ee").encode(
+            x=alt.X("as_of:T", title=None, axis=alt.Axis(format="%b %d")),
+            y=alt.Y("numeric_match_rate:Q", title="Numeric match rate", scale=alt.Scale(domain=[0.8, 1.0])),
+            tooltip=["as_of:T", "numeric_match_rate", "direction_errors", "interpretation_issues"])
+        rule = alt.Chart(pd.DataFrame({"y": [history["threshold_numeric_accuracy"]]})).mark_rule(color="#f43f5e", strokeDash=[4, 4]).encode(y="y:Q")
+        st.altair_chart(style_chart(chart + rule), width="stretch")
+        st.caption(f"Red line: threshold {history['threshold_numeric_accuracy']}. Direction errors {history['summary']['direction_errors']} "
+                   f"of {history['summary']['direction_checked']} checked; interpretation issues {history['summary']['interpretation_issues']}.")
     if report.get("answers"):
         st.dataframe(pd.DataFrame(report["answers"]).drop(columns=["failures"]), hide_index=True)
     st.caption("Checks numbers and citations against DuckDB. It does not judge interpretation or direction words.")
